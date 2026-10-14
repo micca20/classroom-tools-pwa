@@ -18,11 +18,17 @@ export default {
     }
     function dictate(n, ta) {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) { toast('Dictation not supported in this browser — use the keyboard mic'); return; }
-      const rec = new SR(); rec.lang = 'en-US'; rec.interimResults = false;
+      if (!SR) { toast('Dictation isn’t available here — tap the text box and use the 🎤 key on your keyboard', 4000); ta.focus(); return; }
+      const rec = new SR(); rec.lang = navigator.language || 'en-US'; rec.interimResults = false;
       rec.onresult = (e) => { ta.value = `${ta.value} ${e.results[0][0].transcript}`.trim(); n.text = ta.value; save(notes().map((x) => (x.id === n.id ? { ...x, text: n.text } : x))); };
-      rec.onerror = () => toast('Could not hear that');
-      rec.start(); toast('Listening…');
+      rec.onerror = (e) => {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          toast('Microphone/Speech Recognition is blocked — see Settings → Microphone. Or use the 🎤 key on your keyboard.', 5000);
+        } else if (e.error === 'no-speech') toast('Didn’t hear anything');
+        else if (e.error === 'audio-capture') toast('No microphone available');
+        else toast('Dictation stopped — try the 🎤 key on your keyboard');
+      };
+      try { rec.start(); toast('Listening…'); } catch { toast('Dictation is already running'); }
     }
     function render(focusId) {
       listEl.innerHTML = '';

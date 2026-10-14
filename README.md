@@ -49,6 +49,13 @@ Remap everything in **Settings → Bluetooth clicker & keyboard → Learn**.
 Tip: the app requests a screen wake lock while a tool is open so routines and timers keep announcing. On iOS, sound
 starts after your first tap (browser rule).
 
+## Sound & microphone troubleshooting (iPhone/iPad)
+
+- **No sound:** tap the “Tap to turn on sound” banner, turn the volume up, and turn off the ring/silent switch (or Silent Mode in Control Center). Settings → *Test sound*.
+- **Mic blocked:** Settings app → Apps → Safari → Microphone → *Ask* or *Allow* (also Privacy & Security → Microphone). In Safari you can use **aA → Website Settings → Microphone → Allow**. Then fully close and reopen the app.
+- Home Screen web apps on iOS may ask for mic permission again each launch — that's an Apple limitation.
+- In-app: **Settings → Microphone → Test microphone** shows the permission state and live level. The Noise Meter has **Calibrate quiet room** for accurate readings.
+
 ## Privacy
 
 Everything (rosters, notes, logs) is stored in your browser's `localStorage` on that device only. No accounts, no

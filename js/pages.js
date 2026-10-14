@@ -1,7 +1,8 @@
 // Non-tool screens: Routines, Classes, Settings.
 import { h, icon, sheet, toast, confirmSheet, settingsForm } from './ui.js';
 import { store, uid } from './store.js';
-import { SOUNDS, speak, voices, fx } from './audio.js';
+import { SOUNDS, speak, voices, fx, audioCtx } from './audio.js';
+import { getMic, releaseMic, micPermission, micHelp, MicError } from './mic.js';
 import { DAYS, ROUTINE_COLORS, announce, currentRoutine, nextRoutine } from './routines.js';
 
 const fmtClock = (r) => new Date(2000, 0, 1, r.hour, r.minute).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -166,6 +167,38 @@ export const settingsPage = {
     }
     drawKeys();
 
+    // Microphone
+    const micCard = h('div', { class: 'card pad' });
+    const drawMic = async (msg) => {
+      const state = await micPermission();
+      micCard.innerHTML = '';
+      const label = { granted: '✅ Allowed', denied: '🚫 Blocked', prompt: '❔ Not asked yet', unknown: '❔ Unknown (tap Test to check)' }[state];
+      micCard.append(h('h3', {}, icon('mic'), ' Microphone'),
+        h('p', { class: 'hint' }, 'Used only by the Noise Meter and Notes dictation. Audio never leaves this device.'),
+        h('div', { class: 'list-item' }, h('b', {}, 'Permission'), h('span', {}, label)),
+        msg ? h('div', { class: 'list-item' }, h('span', {}, msg)) : null,
+        h('button', { class: 'btn', onclick: testMic }, 'Test microphone'));
+      if (state === 'denied' || msg?.startsWith('🚫')) micCard.append(h('ol', { class: 'help-steps' }, micHelp('denied').map((s) => h('li', {}, s))));
+    };
+    async function testMic() {
+      const c0 = audioCtx();
+      try {
+        const s = await getMic();
+        const c = c0; if (c.state !== 'running') c.resume().catch(() => {});
+        const an = c.createAnalyser(); const src = c.createMediaStreamSource(s); src.connect(an);
+        const buf = new Float32Array(2048); let peak = 0;
+        const t0 = performance.now();
+        await new Promise((res) => { const f = () => { an.getFloatTimeDomainData(buf); for (const v of buf) peak = Math.max(peak, Math.abs(v)); performance.now() - t0 < 1500 ? requestAnimationFrame(f) : res(); }; f(); });
+        src.disconnect(); releaseMic(s);
+        if (c.state !== 'running') { drawMic('✅ Permission OK — tap Test again to check the sound level.'); return; }
+        drawMic(peak > 0 ? `🎙 Working — heard sound (peak ${Math.round(20 * Math.log10(peak))} dB)` : '⚠️ Mic opened but heard only silence — another app may be using it.');
+      } catch (e) {
+        drawMic(`🚫 ${e.message}`);
+        if (!(e instanceof MicError) || e.code !== 'denied') micCard.append(h('ol', { class: 'help-steps' }, micHelp(e.code).map((x) => h('li', {}, x))));
+      }
+    }
+    drawMic();
+
     // Tiles
     const tiles = h('div', { class: 'card pad' }, h('h3', {}, 'Home screen tools'));
     const hidden = new Set(store.get('settings.hiddenTools', []));
@@ -183,7 +216,7 @@ export const settingsPage = {
         } }, 'Import backup'),
         h('button', { class: 'btn danger', onclick: async () => { if (await confirmSheet('Erase all data on this device?', 'Erase')) { store.reset(); location.reload(); } } }, 'Erase all')));
 
-    root.append(h('div', { class: 'stack' }, general, keys, tiles, data,
+    root.append(h('div', { class: 'stack' }, general, micCard, keys, tiles, data,
       h('p', { class: 'hint center' }, 'Classroom Tools · an open-source PWA inspired by myClassroom')));
     return {};
   },

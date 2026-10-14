@@ -1,9 +1,9 @@
 // Offline-first service worker. Bump VERSION when files change.
-const VERSION = 'ct-v2';
+const VERSION = 'ct-v3';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css', 'fonts/Fredoka.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
-  'js/app.js', 'js/store.js', 'js/audio.js', 'js/icons.js', 'js/ui.js', 'js/music.js', 'js/routines.js', 'js/pages.js',
+  'js/app.js', 'js/mic.js', 'js/store.js', 'js/audio.js', 'js/icons.js', 'js/ui.js', 'js/music.js', 'js/routines.js', 'js/pages.js',
   'js/tools/bell.js', 'js/tools/timer.js', 'js/tools/sticks.js', 'js/tools/groups.js', 'js/tools/tallies.js',
   'js/tools/timeLost.js', 'js/tools/hearts.js', 'js/tools/noise.js', 'js/tools/hallPass.js', 'js/tools/dice.js',
   'js/tools/transitions.js', 'js/tools/music.js', 'js/tools/notes.js', 'js/tools/brain.js', 'js/tools/seating.js',

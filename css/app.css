@@ -343,3 +343,10 @@ details[open] summary { margin-bottom: 10px; }
   transition: transform .3s; white-space: nowrap;
 }
 .sound-banner.show { transform: translate(-50%, 0); }
+
+.help-box { text-align: left; width: min(100%, 560px); border: 2px solid #f3c4c4; background: #fff8f8; }
+.help-steps { margin: 4px 0 6px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.35; }
+.card .help-steps { text-align: left; }
+.chip.perm { font-size: .85rem; }
+.chip.perm.bad { background: #fde8e8; color: #c43c3c; box-shadow: none; }
+[hidden] { display: none !important; }

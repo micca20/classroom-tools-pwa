@@ -9,6 +9,12 @@ let master;
 // playing forces media-style audio that ignores the silent switch.
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* ignore */ }
 
+// While the mic is live iOS needs "play-and-record"; "playback" can make the mic deliver silence.
+export function setAudioSession(type) {
+  try { if (navigator.audioSession) navigator.audioSession.type = type; } catch { /* ignore */ }
+  if (type === 'playback') setTimeout(() => { startSessionKeeper(); if (ctx && ctx.state !== 'running') ctx.resume().catch(() => {}); }, 300);
+}
+
 function silentWavURL() {
   const rate = 8000; const n = rate / 2; // 0.5 s of silence
   const buf = new ArrayBuffer(44 + n); const v = new DataView(buf);
