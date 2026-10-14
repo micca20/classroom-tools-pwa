@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION when files change.
-const VERSION = 'ct-v3';
+const VERSION = 'ct-v4';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css', 'fonts/Fredoka.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

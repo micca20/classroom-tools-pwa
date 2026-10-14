@@ -184,8 +184,10 @@ export function voices() {
   return 'speechSynthesis' in window ? speechSynthesis.getVoices().filter((v) => v.lang?.startsWith('en') || true) : [];
 }
 
+export const ttsEnabled = () => store.get('settings.tts', true) !== false;
+
 export function speak(text, { interrupt = true, rate } = {}) {
-  if (!('speechSynthesis' in window) || !text) return Promise.resolve();
+  if (!('speechSynthesis' in window) || !text || !ttsEnabled()) return Promise.resolve();
   return new Promise((resolve) => {
     if (interrupt) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);

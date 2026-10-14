@@ -1,7 +1,7 @@
 // Non-tool screens: Routines, Classes, Settings.
 import { h, icon, sheet, toast, confirmSheet, settingsForm } from './ui.js';
 import { store, uid } from './store.js';
-import { SOUNDS, speak, voices, fx, audioCtx } from './audio.js';
+import { SOUNDS, speak, voices, fx, audioCtx, ttsEnabled } from './audio.js';
 import { getMic, releaseMic, micPermission, micHelp, MicError } from './mic.js';
 import { DAYS, ROUTINE_COLORS, announce, currentRoutine, nextRoutine } from './routines.js';
 
@@ -131,9 +131,21 @@ export const settingsPage = {
     const general = h('div', { class: 'card pad' });
     settingsForm(general, 'settings', [
       { key: 'volume', label: 'Volume', type: 'range', min: 0, max: 1, step: 0.05, default: 0.8, format: (v) => `${Math.round(v * 100)}%` },
+      { key: 'tts', label: 'Spoken announcements (text-to-speech)', hint: 'Off = no spoken names, timer callouts, routine or alarm messages. Bells and sounds still play.', type: 'toggle', default: true },
+    ], (key, on) => {
+      if (key !== 'tts') return;
+      voiceBox.hidden = !on;
+      if (!on && 'speechSynthesis' in window) speechSynthesis.cancel();
+      toast(on ? 'Spoken announcements on' : 'Spoken announcements off');
+    });
+    const voiceBox = h('div', { class: 'col', hidden: !ttsEnabled() });
+    settingsForm(voiceBox, 'settings', [
       { key: 'voice', label: 'Voice', type: 'select', default: '', options: () => [['', 'System default'], ...voices().map((v) => [v.name, `${v.name} (${v.lang})`])] },
       { key: 'voiceRate', label: 'Speaking speed', type: 'range', min: 0.6, max: 1.4, step: 0.05, default: 1, format: (v) => `${v.toFixed(2)}×` },
       { key: 'button', type: 'button', label: 'Test', text: 'Test voice', onClick: () => speak('Good morning class! Let’s have a great day.') },
+    ]);
+    general.append(voiceBox);
+    settingsForm(general, 'settings', [
       { key: 'button2', type: 'button', label: 'No sound?', hint: 'On iPhone/iPad: flip the ring/silent switch off (or turn off Silent Mode in Control Center), turn the volume up, and check Bluetooth isn’t sending audio elsewhere.', text: 'Test sound', onClick: () => fx.play('chime') },
     ]);
 
@@ -173,11 +185,11 @@ export const settingsPage = {
       const state = await micPermission();
       micCard.innerHTML = '';
       const label = { granted: '✅ Allowed', denied: '🚫 Blocked', prompt: '❔ Not asked yet', unknown: '❔ Unknown (tap Test to check)' }[state];
-      micCard.append(h('h3', {}, icon('mic'), ' Microphone'),
+      micCard.append(...[h('h3', {}, icon('mic'), ' Microphone'),
         h('p', { class: 'hint' }, 'Used only by the Noise Meter and Notes dictation. Audio never leaves this device.'),
         h('div', { class: 'list-item' }, h('b', {}, 'Permission'), h('span', {}, label)),
         msg ? h('div', { class: 'list-item' }, h('span', {}, msg)) : null,
-        h('button', { class: 'btn', onclick: testMic }, 'Test microphone'));
+        h('button', { class: 'btn', onclick: testMic }, 'Test microphone')].filter(Boolean));
       if (state === 'denied' || msg?.startsWith('🚫')) micCard.append(h('ol', { class: 'help-steps' }, micHelp('denied').map((s) => h('li', {}, s))));
     };
     async function testMic() {
