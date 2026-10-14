@@ -4,6 +4,7 @@ import { unlockAudio, keepAwake, audioReady, fx } from './audio.js';
 import { startRoutineEngine, currentRoutine } from './routines.js';
 import { routinesPage, classesPage, settingsPage } from './pages.js';
 import { timerStatus } from './tools/timer.js';
+import { backupStatus, exportBackup, snooze, lastBackupText, requestPersistence } from './backup.js';
 
 import bell from './tools/bell.js';
 import timer from './tools/timer.js';
@@ -69,10 +70,17 @@ function renderHome() {
   };
   tick();
   const classBtn = h('button', { class: 'class-switch', onclick: () => pickClass() }, cls?.name || 'Add a class', ' ▾');
+  const bs = backupStatus();
+  const backupNag = bs.due ? h('div', { class: 'backup-nag' },
+    h('div', {}, h('b', {}, '💾 Time to back up'), h('div', { class: 'muted' }, bs.last ? `Last backup ${lastBackupText(bs).toLowerCase()}` : 'Your classes have never been backed up')),
+    h('div', { class: 'row gap' },
+      h('button', { class: 'btn sm', onclick: () => { snooze(7); renderHome(); } }, 'Later'),
+      h('button', { class: 'btn sm primary', style: { '--c': '#5FB25A' }, onclick: async () => { if (await exportBackup()) { toast('Backup saved ✓'); renderHome(); } } }, 'Back up now'))) : null;
   app.replaceChildren(h('div', { class: 'home' },
     h('div', { class: 'home-top' },
       h('div', {}, h('div', { class: 'brand' }, 'Classroom Tools'), classBtn),
       h('div', { class: 'right' }, clock, status)),
+    backupNag,
     h('main', { class: 'tile-panel' },
       h('div', { class: 'tiles' }, TOOLS.filter((t) => !hidden.has(t.id)).map((t) =>
         h('button', { class: 'tile', style: { '--bg': t.bg, '--fg': t.fg }, onclick: () => go(`tool/${t.id}`) },
@@ -170,6 +178,11 @@ updateSoundBanner();
 window.addEventListener('hashchange', render);
 render();
 startRoutineEngine();
+
+// Ask the browser to keep our data safe from automatic cleanup (silently; some browsers want a gesture first).
+requestPersistence();
+window.addEventListener('click', () => requestPersistence(), { once: true, capture: true });
+document.addEventListener('storage-error', () => toast('⚠️ Couldn’t save — device storage is full or blocked. Export a backup in Settings!', 6000));
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});

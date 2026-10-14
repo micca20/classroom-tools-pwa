@@ -38,19 +38,32 @@ const defaults = () => ({
 });
 
 let state;
+let hadSaved = false;
 try {
-  state = { ...defaults(), ...JSON.parse(localStorage.getItem(KEY) || '{}') };
+  const raw = localStorage.getItem(KEY);
+  hadSaved = !!raw;
+  state = { ...defaults(), ...JSON.parse(raw || '{}') };
   state.settings = { ...defaults().settings, ...state.settings };
   state.settings.keys = { ...defaults().settings.keys, ...state.settings.keys };
 } catch {
   state = defaults();
 }
+// meta: { createdAt, lastChangeAt, lastBackupAt, snoozeUntil } — used for backup reminders.
+state.meta = { createdAt: Date.now(), ...(state.meta || {}) };
+// Data saved before backup tracking existed counts as unsaved work.
+if (hadSaved && !state.meta.lastChangeAt) state.meta.lastChangeAt = state.meta.createdAt;
 
 const subs = new Set();
 let saveTimer;
-function persist() {
+function persist(markChange = true) {
+  if (markChange) state.meta.lastChangeAt = Date.now();
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => localStorage.setItem(KEY, JSON.stringify(state)), 150);
+  saveTimer = setTimeout(write, 150);
+}
+function write() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {
+    document.dispatchEvent(new CustomEvent('storage-error', { detail: e }));
+  }
 }
 
 function walk(path, create) {
@@ -75,7 +88,7 @@ export const store = {
   set(path, value) {
     const [o, k] = walk(path, true);
     o[k] = value;
-    persist();
+    persist(!path.startsWith('meta.')); // bookkeeping doesn't count as "unsaved changes"
     subs.forEach((fn) => fn(path));
   },
   update(path, fn, fallback) {
@@ -83,15 +96,21 @@ export const store = {
   },
   subscribe(fn) { subs.add(fn); return () => subs.delete(fn); },
   get state() { return state; },
-  exportJSON() { return JSON.stringify(state, null, 2); },
+  exportJSON() { return JSON.stringify({ app: 'classroom-tools', version: 1, exportedAt: new Date().toISOString(), ...state }, null, 2); },
   importJSON(text) {
     const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.classes)) throw new Error('Not a Classroom Tools backup');
+    delete parsed.app; delete parsed.version; delete parsed.exportedAt;
     state = { ...defaults(), ...parsed };
-    localStorage.setItem(KEY, JSON.stringify(state));
+    state.settings = { ...defaults().settings, ...state.settings };
+    const now = Date.now();
+    state.meta = { createdAt: now, ...(state.meta || {}), lastBackupAt: now, lastChangeAt: now, snoozeUntil: 0 };
+    write();
     subs.forEach((fn) => fn('*'));
   },
-  reset() { state = defaults(); localStorage.setItem(KEY, JSON.stringify(state)); subs.forEach((fn) => fn('*')); },
-  flush() { clearTimeout(saveTimer); localStorage.setItem(KEY, JSON.stringify(state)); },
+  reset() { state = defaults(); state.meta = { createdAt: Date.now() }; write(); subs.forEach((fn) => fn('*')); },
+  flush() { clearTimeout(saveTimer); write(); },
+  sizeBytes() { return new Blob([JSON.stringify(state)]).size; },
 };
 
 export function currentClass() {

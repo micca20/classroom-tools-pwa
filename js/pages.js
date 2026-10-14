@@ -2,7 +2,8 @@
 import { h, icon, sheet, toast, confirmSheet, settingsForm } from './ui.js';
 import { store, uid } from './store.js';
 import { SOUNDS, speak, voices, fx, audioCtx, ttsEnabled } from './audio.js';
-import { getMic, releaseMic, micPermission, micHelp, MicError } from './mic.js';
+import { getMic, releaseMic, micPermission, micHelp, MicError, isIOS } from './mic.js';
+import { exportBackup, backupStatus, storageInfo, requestPersistence, lastBackupText, inSafariTab, fmtBytes } from './backup.js';
 import { DAYS, ROUTINE_COLORS, announce, currentRoutine, nextRoutine } from './routines.js';
 
 const fmtClock = (r) => new Date(2000, 0, 1, r.hour, r.minute).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -217,16 +218,43 @@ export const settingsPage = {
     api.tools.forEach((t) => tiles.append(h('label', { class: 'field inline' }, h('span', { class: 'field-label' }, t.name),
       h('input', { type: 'checkbox', class: 'switch', checked: !hidden.has(t.id), onchange: (e) => { e.target.checked ? hidden.delete(t.id) : hidden.add(t.id); store.set('settings.hiddenTools', [...hidden]); } }))));
 
-    // Backup
-    const data = h('div', { class: 'card pad' }, h('h3', {}, 'Backup'),
-      h('p', { class: 'hint' }, 'Everything is stored on this device only. Export a backup to move it to another device.'),
-      h('div', { class: 'row gap' },
-        h('button', { class: 'btn', onclick: () => { store.flush(); h('a', { href: URL.createObjectURL(new Blob([store.exportJSON()], { type: 'application/json' })), download: `classroom-tools-backup-${new Date().toISOString().slice(0, 10)}.json` }).click(); } }, 'Export backup'),
+    // Backup & storage
+    const data = h('div', { class: 'card pad' });
+    const drawData = async () => {
+      const s = backupStatus(); const info = await storageInfo();
+      data.innerHTML = '';
+      const row = (label, value, cls) => h('div', { class: 'list-item' + (cls ? ` ${cls}` : '') }, h('b', {}, label), h('span', {}, value));
+      const prot = info.persisted === true ? '✅ Protected' : info.persisted === false ? '⚠️ Not protected' : '— Not supported';
+      data.append(...[
+        h('h3', {}, '💾 Backup & storage'),
+        h('p', { class: 'hint' }, 'Classes, students, routines and notes are saved automatically on this device only — nothing is uploaded. Export a backup to keep a safe copy or move to another device.'),
+        inSafariTab ? h('div', { class: 'list-item warn' }, h('span', {}, '⚠️ You’re in a Safari tab. Safari can erase website data after 7 days without a visit. Use Share → Add to Home Screen and set up your classes in the installed app.')) : null,
+        row('Last backup', lastBackupText(s), s.due ? 'warn' : ''),
+        s.unsaved && s.last ? h('p', { class: 'hint' }, 'You’ve made changes since your last backup.') : null,
+        row('Storage protection', prot),
+        info.persisted === false ? h('div', { class: 'row gap' },
+          h('button', { class: 'btn sm', onclick: async () => { const ok = await requestPersistence(); toast(ok ? 'Storage protected ✓' : 'The browser declined — keep regular backups (installing to the Home Screen helps)'); drawData(); } }, 'Ask to protect'),
+          h('span', { class: 'muted' }, 'Stops the browser from clearing data to free space')) : null,
+        row('Space used', `${fmtBytes(info.appBytes)}${info.quota ? ` of ${fmtBytes(info.quota)} available` : ''}`),
+      ].filter(Boolean));
+      settingsForm(data, 'settings', [
+        { key: 'backupReminderDays', label: 'Remind me to back up', type: 'select', number: true, default: 30,
+          options: [[7, 'Every week'], [14, 'Every 2 weeks'], [30, 'Every month'], [0, 'Never']] },
+      ], () => drawData());
+      data.append(h('div', { class: 'row gap' },
+        h('button', { class: 'btn primary', onclick: async () => { if (await exportBackup()) { toast('Backup saved ✓'); drawData(); } } }, 'Export backup'),
         h('button', { class: 'btn', onclick: () => {
-          const inp = h('input', { type: 'file', accept: 'application/json,.json', onchange: async () => { try { store.importJSON(await inp.files[0].text()); toast('Backup restored'); location.reload(); } catch { toast('That file is not a valid backup'); } } });
+          const inp = h('input', { type: 'file', accept: 'application/json,.json', onchange: async () => {
+            const f = inp.files[0]; if (!f) return;
+            if (!(await confirmSheet('Replace everything on this device with this backup?', 'Restore'))) return;
+            try { store.importJSON(await f.text()); toast('Backup restored'); setTimeout(() => location.reload(), 600); } catch { toast('That file isn’t a Classroom Tools backup'); }
+          } });
           inp.click();
         } }, 'Import backup'),
-        h('button', { class: 'btn danger', onclick: async () => { if (await confirmSheet('Erase all data on this device?', 'Erase')) { store.reset(); location.reload(); } } }, 'Erase all')));
+        h('button', { class: 'btn danger', onclick: async () => { if (await confirmSheet('Erase all data on this device? Export a backup first!', 'Erase')) { store.reset(); location.reload(); } } }, 'Erase all')),
+      h('p', { class: 'hint' }, isIOS ? 'Tip: in the share sheet choose “Save to Files” → iCloud Drive so the backup is safe even if this device is lost.' : 'Tip: keep the backup file somewhere synced, like Google Drive or iCloud Drive.'));
+    };
+    drawData();
 
     root.append(h('div', { class: 'stack' }, general, micCard, keys, tiles, data,
       h('p', { class: 'hint center' }, 'Classroom Tools · an open-source PWA inspired by myClassroom')));
