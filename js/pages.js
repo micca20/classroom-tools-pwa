@@ -133,6 +133,7 @@ export const settingsPage = {
       { key: 'voice', label: 'Voice', type: 'select', default: '', options: () => [['', 'System default'], ...voices().map((v) => [v.name, `${v.name} (${v.lang})`])] },
       { key: 'voiceRate', label: 'Speaking speed', type: 'range', min: 0.6, max: 1.4, step: 0.05, default: 1, format: (v) => `${v.toFixed(2)}×` },
       { key: 'button', type: 'button', label: 'Test', text: 'Test voice', onClick: () => speak('Good morning class! Let’s have a great day.') },
+      { key: 'button2', type: 'button', label: 'No sound?', hint: 'On iPhone/iPad: flip the ring/silent switch off (or turn off Silent Mode in Control Center), turn the volume up, and check Bluetooth isn’t sending audio elsewhere.', text: 'Test sound', onClick: () => fx.play('chime') },
     ]);
 
     // Clicker / keyboard mapping

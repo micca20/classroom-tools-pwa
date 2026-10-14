@@ -3,26 +3,69 @@ import { store } from './store.js';
 
 let ctx;
 let master;
+
+// iOS: Web Audio is "ambient" by default, so the ring/silent switch mutes it.
+// Asking for the "playback" session (iOS 17+) or keeping a silent <audio> element
+// playing forces media-style audio that ignores the silent switch.
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* ignore */ }
+
+function silentWavURL() {
+  const rate = 8000; const n = rate / 2; // 0.5 s of silence
+  const buf = new ArrayBuffer(44 + n); const v = new DataView(buf);
+  const w = (o, s) => [...s].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  w(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+let keepAliveEl = null;
+function startSessionKeeper() {
+  if (keepAliveEl) { if (keepAliveEl.paused) keepAliveEl.play().catch(() => {}); return; }
+  keepAliveEl = document.createElement('audio');
+  keepAliveEl.src = silentWavURL();
+  keepAliveEl.loop = true;
+  keepAliveEl.setAttribute('playsinline', '');
+  keepAliveEl.setAttribute('x-webkit-airplay', 'deny');
+  keepAliveEl.play().catch(() => {});
+}
+
 export function audioCtx() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
     master.connect(ctx.destination);
+    ctx.onstatechange = () => document.dispatchEvent(new CustomEvent('audio-state', { detail: ctx.state }));
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  // iOS can leave the context "suspended" or "interrupted" (calls, Siri, app switch).
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
   master.gain.value = store.get('settings.volume', 0.8);
   return ctx;
 }
 export function masterOut() { audioCtx(); return master; }
+export const audioReady = () => !!ctx && ctx.state === 'running';
 
-// iOS needs audio to be unlocked by a gesture.
+// Must run inside a real user gesture (touchend / click / keydown on iOS).
+let speechWarmed = false;
 export function unlockAudio() {
+  startSessionKeeper();
   const c = audioCtx();
-  const b = c.createBuffer(1, 1, 22050);
   const s = c.createBufferSource();
-  s.buffer = b; s.connect(master); s.start(0);
-  if ('speechSynthesis' in window) speechSynthesis.getVoices();
+  s.buffer = c.createBuffer(1, 1, 22050);
+  s.connect(master); s.start(0);
+  if ('speechSynthesis' in window && !speechWarmed) {
+    speechWarmed = true;
+    speechSynthesis.getVoices();
+    const u = new SpeechSynthesisUtterance(' '); u.volume = 0; // first utterance must come from a gesture on iOS
+    speechSynthesis.speak(u);
+  }
+  return c.state;
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ctx && ctx.state !== 'running') ctx.resume().catch(() => {});
+});
 
 function tone({ freq = 440, type = 'sine', start = 0, dur = 1, gain = 0.3, attack = 0.005, glideTo, dest }) {
   const c = audioCtx();

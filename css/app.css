@@ -336,3 +336,10 @@ details[open] summary { margin-bottom: 10px; }
 
 .stack > .pill-btn { align-self: center; }
 .break-card .emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+
+.sound-banner {
+  position: fixed; left: 50%; top: calc(var(--safe-top) + 10px); transform: translate(-50%, -150%); z-index: 70;
+  background: #2f2f33; color: #fff; font-weight: 600; padding: 12px 20px; border-radius: 999px; box-shadow: var(--shadow);
+  transition: transform .3s; white-space: nowrap;
+}
+.sound-banner.show { transform: translate(-50%, 0); }

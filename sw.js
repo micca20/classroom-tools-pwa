@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION when files change.
-const VERSION = 'ct-v1';
+const VERSION = 'ct-v2';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css', 'fonts/Fredoka.woff2',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
@@ -17,17 +17,12 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-// Network-first for navigations (fresh updates), cache-first for everything else.
+// Network-first everywhere (so fixes land on the next launch), cache fallback when offline.
 self.addEventListener('fetch', (e) => {
   const { request } = e;
   if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
-  if (request.mode === 'navigate') {
-    e.respondWith(fetch(request).then((r) => { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('index.html', copy)); return r; }).catch(() => caches.match('index.html')));
-    return;
-  }
-  // Stale-while-revalidate: instant from cache, refreshed in the background for next launch.
-  e.respondWith(caches.open(VERSION).then((cache) => cache.match(request, { ignoreSearch: true }).then((hit) => {
-    const net = fetch(request).then((r) => { if (r.ok) cache.put(request, r.clone()); return r; }).catch(() => hit);
-    return hit || net;
-  })));
+  e.respondWith(fetch(request, { cache: 'no-cache' }).then((r) => {
+    if (r.ok) { const copy = r.clone(); caches.open(VERSION).then((c) => c.put(request.mode === 'navigate' ? 'index.html' : request, copy)); }
+    return r;
+  }).catch(() => caches.match(request.mode === 'navigate' ? 'index.html' : request, { ignoreSearch: true })));
 });

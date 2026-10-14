@@ -1,6 +1,6 @@
 import { h, icon, sheet, settingsForm, sheetOpen, toast } from './ui.js';
 import { store, currentClass } from './store.js';
-import { unlockAudio, keepAwake } from './audio.js';
+import { unlockAudio, keepAwake, audioReady, fx } from './audio.js';
 import { startRoutineEngine, currentRoutine } from './routines.js';
 import { routinesPage, classesPage, settingsPage } from './pages.js';
 import { timerStatus } from './tools/timer.js';
@@ -156,10 +156,16 @@ document.addEventListener('reset-tools', () => {
 });
 document.addEventListener('routine', (e) => { toast(`⏰ ${e.detail.name}`, 4000); if (!active) renderHome(); });
 
-// First interaction unlocks audio on iOS.
-const unlock = () => { unlockAudio(); window.removeEventListener('pointerdown', unlock); window.removeEventListener('keydown', unlock); };
-window.addEventListener('pointerdown', unlock);
-window.addEventListener('keydown', unlock);
+// Every gesture re-arms audio (iOS only accepts touchend/click/keydown, and can interrupt the context any time).
+const unlock = () => { unlockAudio(); updateSoundBanner(); };
+['touchend', 'click', 'keydown'].forEach((ev) => window.addEventListener(ev, unlock, { capture: true, passive: true }));
+
+const soundBanner = h('button', { class: 'sound-banner', onclick: () => { unlock(); fx.click(); } }, '🔇 Tap to turn on sound');
+document.body.append(soundBanner);
+function updateSoundBanner() { setTimeout(() => soundBanner.classList.toggle('show', !audioReady()), 400); }
+document.addEventListener('audio-state', updateSoundBanner);
+document.addEventListener('visibilitychange', updateSoundBanner);
+updateSoundBanner();
 
 window.addEventListener('hashchange', render);
 render();
@@ -167,4 +173,8 @@ startRoutineEngine();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // When an updated service worker takes over, reload once so the new code runs right away.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
 }
