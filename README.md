@@ -21,7 +21,7 @@ built as a free, open-source Progressive Web App with zero dependencies and no b
 | 🚪 **Hall Pass** | Sign students out to a destination, overtime warnings, max-out limit and a log. |
 | 🎲 **Coin & Dice** | Coin flip, 1–6 dice, or random number range. |
 | 🔁 **Transitions** | Timed transitions (Clean Up, Line Up…) with music and spoken start/end cues. |
-| 🎵 **Music Box** | 160 generative instrumental tracks across 10 moods + sleep timer — synthesized live, so it works offline. |
+| 🎵 **Music Box** | Three sources, one player: **Built-in** (224 original generated tracks in 14 moods incl. Pop Hits, Dance/EDM, Hip-Hop Beat, Pop Ballad — offline), **My Music** (import your own MP3/M4A files, stored on-device), and **YouTube** (save playlist/video links; official privacy-enhanced player with a mini player while you use other tools). Shuffle, repeat, sleep timer, clicker control. |
 | 📝 **Notes** | One press drops a note auto-tagged with time, date and current subject. Add text or dictate later; export. |
 | 🧠 **Brain Breaks** | Guided breathing, movement, stretch and silly breaks with voice + music. |
 | 🪑 **Smart Seating** | Draw desks on a grid, then generate seating charts that honor unwanted/wanted pairs and front/middle/back zones using real desk distances (adjustable radius). Tap two desks to swap; print. |
@@ -55,6 +55,12 @@ starts after your first tap (browser rule).
 - **Mic blocked:** Settings app → Apps → Safari → Microphone → *Ask* or *Allow* (also Privacy & Security → Microphone). In Safari you can use **aA → Website Settings → Microphone → Allow**. Then fully close and reopen the app.
 - Home Screen web apps on iOS may ask for mic permission again each launch — that's an Apple limitation.
 - In-app: **Settings → Microphone → Test microphone** shows the permission state and live level. The Noise Meter has **Calibrate quiet room** for accurate readings.
+
+## About music & copyright
+
+The built-in tracks are original, generated in the browser — no copyrighted songs ship with this app. For current hits, use
+**My Music** with files you own (e.g. purchased instrumental/cover albums) or **YouTube** links, which play through YouTube's
+official embedded player. Imported music stays on the device and isn't included in backups.
 
 ## Privacy
 

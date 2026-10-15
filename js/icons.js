@@ -31,4 +31,7 @@ export const ICONS = {
   speaker: svg('<path d="M8 24h12l16-14v44L20 40H8z"/><path d="M44 22a14 14 0 0 1 0 20M50 14a24 24 0 0 1 0 36" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>'),
   remote: svg('<rect x="16" y="4" width="32" height="56" rx="16"/><circle cx="32" cy="20" r="5" fill="#fff"/><circle cx="24" cy="32" r="4" fill="#fff"/><circle cx="40" cy="32" r="4" fill="#fff"/><circle cx="32" cy="44" r="4" fill="#fff"/>'),
   check: svg('<path d="M12 34l13 13 27-29" stroke="currentColor" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+  next: svg('<path d="M8 10l30 22L8 54z"/><rect x="44" y="10" width="10" height="44" rx="3"/>'),
+  prev: svg('<path d="M56 10L26 32l30 22z"/><rect x="10" y="10" width="10" height="44" rx="3"/>'),
+  close: svg('<path d="M16 16l32 32M48 16L16 48" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>'),
 };
